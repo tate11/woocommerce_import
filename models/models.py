@@ -92,8 +92,8 @@ class woocommerce_import(models.Model):
                         'model': 'product.template'
                     })
 
-                    self.existing_inventories = self.env['stock.inventory'].search([])
-                    self.existing_quants = self.env['stock.quant'].search([])
+                    product.existing_inventories = self.env['stock.inventory'].search([])
+                    product.existing_quants = self.env['stock.quant'].search([])
 
                     inventory_wizard = self.env['stock.change.product.qty'].create({
                         'product_id': product.id,
