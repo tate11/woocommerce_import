@@ -1,0 +1,84 @@
+<odoo>
+    <data>
+
+        <record model="ir.ui.view" id="view_woocommerce_import_true">
+            <field name="name">woocommerce_import.woocommerce_import.tree</field>
+            <field name="model">woocommerce_import.woocommerce_import</field>
+            <field name="type">tree</field>
+            <field name="arch" type="xml">
+                <field name="title" string="Title"/>
+                <field name="url" string="URL"/>
+            </field>
+        </record>
+
+        <record model="ir.ui.view" id="view_woocommerce_import_view">
+            <field name="name">woocommerce_import.woocommerce_import.view</field>
+            <field name="model">woocommerce_import.woocommerce_import</field>
+            <field name="arch" type="xml">
+                <form>
+
+                    <header>
+                        <button name="action_import_all" string="Import All" type="object"
+                                class="btn-primary"/>
+
+                        <button name="action_import_product" string="Import Products" type="object"
+                                class="btn-default"/>
+
+                        <button name="action_import_customers" string="Import Customers" type="object"
+                                class="btn-default"/>
+
+                        <button name="action_import_orders" string="Import Orders" type="object"
+                                class="btn-default"/>
+
+                        <button name="action_import_pos" string="POS" type="object"
+                                class="btn-default"/>
+                    </header>
+
+                    <sheet>
+                        <group>
+                            <field name="title" string="Title"/>
+                        </group>
+
+                        <group>
+                            <field name="url" string="URL"/>
+                        </group>
+
+                        <group>
+                            <field name="consumer_key" string="Consumer key"/>
+                        </group>
+
+                        <group>
+                            <field name="consumer_secret" string="Consumer secret"/>
+                        </group>
+
+                        <group>
+                            <field name="limit" string="Results limit"/>
+                        </group>
+
+                        <group>
+                            <field name="timeout" string="Timeout"/>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="action_woocommerce_import" model="ir.actions.act_window">
+            <field name="name">WooCommerce Import</field>
+            <field name="res_model">woocommerce_import.woocommerce_import</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+            <field name="domain">[]</field>
+            <field name="context">{}</field>
+            <field name="help" type="html">
+                <p class="oe_view_nocontent_create">
+                    Create new connection
+                </p>
+            </field>
+        </record>
+
+        <menuitem id="woocommerce_import_view_menu" name="WooCommerce Import" sequence="9"
+                  web_icon="woocommerce_import,static/description/icon.png"
+                  action="action_woocommerce_import"/>
+    </data>
+</odoo>
