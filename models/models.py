@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 
-import base64, requests, logging
+import base64, requests, logging, time
 from odoo import models, fields, api
 
-import time
 from woocommerce import API
 
 _logger = logging.getLogger(__name__)
@@ -42,6 +41,11 @@ class woocommerce_import(models.Model):
         except ImportError:
             _logger.error('Error retrieving data')
             return {}
+
+    def action_import_all(self):
+        self.action_import_customers()
+        self.action_import_product()
+        self.action_import_orders()
 
     def action_import_product(self):
 
@@ -190,6 +194,11 @@ class woocommerce_import(models.Model):
                         ('name', '=', item['pos'])
                     ])
 
+                    if not pos_config:
+                        pos_config = self.env['pos.config'].create([
+                            ('name', '=', item['pos'])
+                        ])
+
                     pos = self.env['pos.session'].search([
                         ('start_at', '<=', item['created_at'][0:10]),
                         ('start_at', '>=', item['created_at'][0:10])
@@ -198,7 +207,7 @@ class woocommerce_import(models.Model):
                     if not pos:
                         pos = self.env['pos.session'].create({
                             'name': 'WooPos',
-                            'config_id': 1
+                            'config_id': pos_config.id
                         })
 
                     orders = self.env['pos.order'].create({
