@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import base64, requests, logging, time
+import base64, requests, logging, json, pprint
 from odoo import models, fields, api
 
 from woocommerce import API
@@ -15,7 +15,8 @@ class woocommerce_import(models.Model):
     url = fields.Char(required=True)
     consumer_key = fields.Char(required=True)
     consumer_secret = fields.Char(required=True)
-    limit = fields.Integer(required=True, default=5000)
+    offset = fields.Integer(required=True, default=0)
+    limit = fields.Integer(required=True, default=200)
     timeout = fields.Integer(required=True, default=60000)
 
     @api.multi
@@ -34,7 +35,10 @@ class woocommerce_import(models.Model):
                 timeout=self.timeout
             )
 
-            result = wcapi.get(endpoint + "?filter[limit]=" + str(self.limit)).json()
+            result_api = wcapi.get(
+                endpoint + "?filter[offset]=" + str(self.offset) + '&filter[limit]=' + str(self.limit))
+
+            result = json.loads(result_api.text)
 
             return result
 
@@ -51,58 +55,66 @@ class woocommerce_import(models.Model):
 
         products = self.api("products")
 
-        if products:
+        if not products:
+            return {}
 
-            self.warehouse = self.env['stock.warehouse'].search([
-                ('code', '=', 'WC')
+        self.warehouse = self.env['stock.warehouse'].search([
+            ('code', '=', 'WC')
+        ])
+
+        if not self.warehouse:
+            self.warehouse = self.env['stock.warehouse'].create({
+                'name': 'WooCommerce',
+                'reception_steps': 'one_step',
+                'delivery_steps': 'ship_only',
+                'code': 'WC'})
+
+        for item in products['products']:
+
+            _logger.info(pprint.pformat('add product ' + item['title']))
+
+            ir_data = self.env['ir.model.data'].search([
+                ('module', '=', 'product.template'),
+                ('name', '=', item['id'])
             ])
 
-            if not self.warehouse:
-                self.warehouse = self.env['stock.warehouse'].create({
-                    'name': 'WooCommerce',
-                    'reception_steps': 'one_step',
-                    'delivery_steps': 'ship_only',
-                    'code': 'WC'})
+            if not ir_data:
+                image = requests.get(item['images'][0]['src'])
 
-            for item in products['products']:
+                product = self.env['product.template'].create({
+                    'name': item['title'],
+                    'list_price': item['regular_price'],
+                    'type': 'product',
+                    'volume': item['stock_quantity'],
+                    'image': base64.b64encode(image.content),
+                    'default_code': item['sku'],
+                    'description_sale': item['description'],
+                    'weight': item['weight']
+                })
 
-                ir_data = self.env['ir.model.data'].search([
-                    ('module', '=', 'product.template'),
-                    ('name', '=', item['id'])
-                ])
+                self.env['ir.model.data'].create({
+                    'module': 'product.template',
+                    'name': item['id'],
+                    'res_id': product.id,
+                    'model': 'product.template'
+                })
 
-                if not ir_data:
-                    image = requests.get(item['images'][0]['src'])
+                stock_inventory = product.env['stock.inventory'].search([])
+                stock_quant = product.env['stock.quant'].search([])
 
-                    product = self.env['product.template'].create({
-                        'name': item['title'],
-                        'list_price': item['regular_price'],
-                        'type': 'product',
-                        'volume': item['stock_quantity'],
-                        'image': base64.b64encode(image.content),
-                        'default_code': item['sku'],
-                        'description_sale': item['description'],
-                        'weight': item['weight']
-                    })
+                if stock_inventory:
+                    product.existing_inventories = stock_inventory
 
-                    self.env['ir.model.data'].create({
-                        'module': 'product.template',
-                        'name': item['id'],
-                        'res_id': product.id,
-                        'model': 'product.template'
-                    })
+                if stock_quant:
+                    product.existing_quants = stock_quant
 
-                    product.existing_inventories = self.env['stock.inventory'].search([])
-                    product.existing_quants = self.env['stock.quant'].search([])
-
+                if item['stock_quantity'] > 0:
                     inventory_wizard = self.env['stock.change.product.qty'].create({
                         'product_id': product.id,
                         'new_quantity': float(item['stock_quantity']),
                         'location_id': self.warehouse.lot_stock_id.id,
                     })
                     inventory_wizard.change_product_qty()
-        else:
-            _logger.debug('Error retrieving data')
 
     def action_import_customers(self):
         customers = self.api("customers")

@@ -52,6 +52,11 @@
                         </group>
 
                         <group>
+                            <field name="offset" string="Results offset"/>
+                        </group>
+
+
+                        <group>
                             <field name="limit" string="Results limit"/>
                         </group>
 
